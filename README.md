@@ -155,7 +155,13 @@ Layouts nest. A `blog/layout.tsx` renders inside `layout.tsx`, and `blog/[slug]/
 
 ## Typed params
 
-The generated `routes.gen.ts` exports a typed `useAppParams` hook:
+The generated `routes.gen.ts` exports:
+
+- `AppRouteParams`: route-to-params map
+- `AppRoutePath`: union of all generated route keys
+- `useAppParams(route)`: typed params for known routes, safe fallback for custom strings
+
+Example:
 
 ```tsx
 import { useAppParams } from './routes.gen'
@@ -166,6 +172,8 @@ export default function BlogPost() {
   return <h1>{slug}</h1>
 }
 ```
+
+`useAppParams('/some/custom/path')` is also allowed and falls back to `Record<string, string | undefined>`.
 
 ---
 
@@ -251,6 +259,19 @@ If you're already on App Router, the file conventions are intentionally identica
 - [ ] `not-found.tsx` support
 - [ ] TanStack Router adapter
 - [ ] `npx create-approuter-app` scaffold CLI
+
+---
+
+## FAQ
+
+### Why not just use Next.js?
+
+Use Next.js when you need SSR/SSG, server components, or its full platform features.  
+Use this plugin when you want App Router conventions in a pure client-side React + Vite app.
+
+### Does this support TanStack Router?
+
+Not in v1. The current adapter target is React Router v6/v7. TanStack adapter is planned for v2.
 
 ---
 

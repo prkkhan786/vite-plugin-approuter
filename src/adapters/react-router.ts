@@ -154,10 +154,15 @@ export type AppRouteParams = {
 ${paramMapLines.join('\n')}
 }
 
-export function useAppParams<T extends keyof AppRouteParams>(
+export type AppRoutePath = keyof AppRouteParams
+
+type AnyParams = Record<string, string | undefined>
+type ParamsFor<T extends string> = T extends AppRoutePath ? AppRouteParams[T] : AnyParams
+
+export function useAppParams<T extends string>(
   _route: T
-): AppRouteParams[T] {
-  return useParams() as AppRouteParams[T]
+): ParamsFor<T> {
+  return useParams() as ParamsFor<T>
 }
 `
 }

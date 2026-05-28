@@ -16,6 +16,8 @@ describe('codegen', () => {
     expect(out).toContain('createBrowserRouter')
     expect(out).toContain('"/blog/:slug"')
     expect(out).toContain('useAppParams')
+    expect(out).toContain('export type AppRoutePath = keyof AppRouteParams')
+    expect(out).toContain('type ParamsFor<T extends string>')
     expect(out).toContain('BlogSlugPage')
   })
 
@@ -32,6 +34,30 @@ describe('codegen', () => {
     expect(out).toContain('React.createElement(Suspense')
     expect(out).toContain('errorElement: React.createElement(BlogError)')
     expect(out).toContain('useRouteError()')
+  })
+
+  it('lazy-loads all discovered route modules', () => {
+    const tree = buildRouteTree([
+      { absolutePath: '/a/layout.tsx', relativePath: 'layout.tsx', kind: 'layout', segments: [] },
+      { absolutePath: '/a/page.tsx', relativePath: 'page.tsx', kind: 'page', segments: [] },
+      { absolutePath: '/a/about/page.tsx', relativePath: 'about/page.tsx', kind: 'page', segments: ['about'] }
+    ])
+    const out = generateReactRouterConfig(tree, { outFile: '/tmp/routes.gen.ts' })
+    expect(out).toContain('const RootLayout = lazy(() => import(')
+    expect(out).toContain('const RootPage = lazy(() => import(')
+    expect(out).toContain('const AboutPage = lazy(() => import(')
+  })
+
+  it('keeps nested layout routes wrapping Outlet correctly', () => {
+    const tree = buildRouteTree([
+      { absolutePath: '/a/layout.tsx', relativePath: 'layout.tsx', kind: 'layout', segments: [] },
+      { absolutePath: '/a/blog/layout.tsx', relativePath: 'blog/layout.tsx', kind: 'layout', segments: ['blog'] },
+      { absolutePath: '/a/blog/page.tsx', relativePath: 'blog/page.tsx', kind: 'page', segments: ['blog'] },
+      { absolutePath: '/a/blog/[slug]/page.tsx', relativePath: 'blog/[slug]/page.tsx', kind: 'page', segments: ['blog', '[slug]'] }
+    ])
+    const out = generateReactRouterConfig(tree, { outFile: '/tmp/routes.gen.ts' })
+    expect(out).toContain('path: "blog", element: React.createElement(BlogLayout, null, React.createElement(Outlet))')
+    expect(out).toContain('children: [{ index: true, element: React.createElement(BlogPage) }, { path: ":slug", element: React.createElement(BlogSlugPage) }]')
   })
 
   it('includes params for multi-segment dynamic and catch-all routes', () => {
