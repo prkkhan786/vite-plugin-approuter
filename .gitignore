@@ -1,0 +1,41 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# generated route file
+src/routes.gen.ts
+playground/src/routes.gen.ts
+
+# vite
+*.local
+playground/dist/
+
+# env
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# os
+.DS_Store
+Thumbs.db
+
+# test coverage
+coverage/
