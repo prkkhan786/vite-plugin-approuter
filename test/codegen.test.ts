@@ -16,6 +16,32 @@ describe('codegen', () => {
     expect(out).toContain('createBrowserRouter')
     expect(out).toContain('"/blog/:slug"')
     expect(out).toContain('useAppParams')
+    expect(out).toContain('BlogSlugPage')
+  })
+
+  it('wires loading and error boundaries when files exist', () => {
+    const tree = buildRouteTree([
+      { absolutePath: '/a/layout.tsx', relativePath: 'layout.tsx', kind: 'layout', segments: [] },
+      { absolutePath: '/a/page.tsx', relativePath: 'page.tsx', kind: 'page', segments: [] },
+      { absolutePath: '/a/blog/layout.tsx', relativePath: 'blog/layout.tsx', kind: 'layout', segments: ['blog'] },
+      { absolutePath: '/a/blog/loading.tsx', relativePath: 'blog/loading.tsx', kind: 'loading', segments: ['blog'] },
+      { absolutePath: '/a/blog/error.tsx', relativePath: 'blog/error.tsx', kind: 'error', segments: ['blog'] },
+      { absolutePath: '/a/blog/page.tsx', relativePath: 'blog/page.tsx', kind: 'page', segments: ['blog'] }
+    ])
+    const out = generateReactRouterConfig(tree, { outFile: '/tmp/routes.gen.ts' })
+    expect(out).toContain('React.createElement(Suspense')
+    expect(out).toContain('errorElement: React.createElement(BlogError)')
+    expect(out).toContain('useRouteError()')
+  })
+
+  it('includes params for multi-segment dynamic and catch-all routes', () => {
+    const tree = buildRouteTree([
+      { absolutePath: '/a/shop/[...path]/page.tsx', relativePath: 'shop/[...path]/page.tsx', kind: 'page', segments: ['shop', '[...path]'] },
+      { absolutePath: '/a/users/[id]/posts/[postId]/page.tsx', relativePath: 'users/[id]/posts/[postId]/page.tsx', kind: 'page', segments: ['users', '[id]', 'posts', '[postId]'] }
+    ])
+    const out = generateReactRouterConfig(tree, { outFile: '/tmp/routes.gen.ts' })
+    expect(out).toContain('"/shop/*": { "*": string }')
+    expect(out).toContain('"/users/:id/posts/:postId": { "id": string; "postId": string }')
   })
 
   it('skips rewriting unchanged output', async () => {

@@ -149,6 +149,7 @@ export const router = createBrowserRouter([
   { ${rootFields.join(', ')} }
 ])
 
+// error.tsx components should read errors with useRouteError() from react-router-dom.
 export type AppRouteParams = {
 ${paramMapLines.join('\n')}
 }
