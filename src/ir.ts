@@ -1,13 +1,14 @@
 import type { RouteNode } from './types'
 import type { ScannedFile } from './scanner'
-import { isCatchAllSegment, isDynamicSegment, isGroupSegment, toPathPart } from './utils'
+import { isCatchAllSegment, isDynamicSegment, isGroupSegment, isParallelSegment, toPathPart } from './utils'
 
 function segmentMeta(segment: string) {
   const isGroup = isGroupSegment(segment)
+  const isParallel = isParallelSegment(segment)
   const isCatchAll = isCatchAllSegment(segment)
   const isDynamic = isDynamicSegment(segment)
   const paramName = isCatchAll || isDynamic ? segment.slice(isCatchAll ? 4 : 1, -1) : undefined
-  return { isGroup, isCatchAll, isDynamic, paramName }
+  return { isGroup, isParallel, isCatchAll, isDynamic, paramName }
 }
 
 function absolutePathForSegments(segments: string[]): string {
@@ -33,6 +34,7 @@ export function buildRouteTree(files: ScannedFile[]): RouteNode {
     isDynamic: false,
     isCatchAll: false,
     isGroup: false,
+    isParallel: false,
     children: []
   }
 
@@ -53,6 +55,8 @@ export function buildRouteTree(files: ScannedFile[]): RouteNode {
       isDynamic: meta.isDynamic,
       isCatchAll: meta.isCatchAll,
       isGroup: meta.isGroup,
+      isParallel: meta.isParallel,
+      slotName: meta.isParallel ? segment.slice(1) : undefined,
       paramName: meta.paramName,
       children: []
     }
@@ -68,6 +72,8 @@ export function buildRouteTree(files: ScannedFile[]): RouteNode {
       if (file.kind === 'layout') node.layout = file.relativePath
       if (file.kind === 'loading') node.loading = file.relativePath
       if (file.kind === 'error') node.error = file.relativePath
+      if (file.kind === 'not-found') node.notFound = file.relativePath
+      if (file.kind === 'middleware') node.middleware = file.relativePath
     }
   }
 

@@ -219,10 +219,20 @@ approuter({
   outFile: 'src/routes.gen.ts',
 
   // Router adapter. Default: "react-router"
-  // TanStack Router adapter coming in v2.
+  // Experimental TanStack adapter is available as a spike.
   adapter: 'react-router',
 })
 ```
+
+TanStack spike option:
+
+```ts
+approuter({
+  adapter: 'tanstack-router'
+})
+```
+
+This adapter is currently experimental and focused on proving IR portability.
 
 ---
 
@@ -249,6 +259,49 @@ If you're already on App Router, the file conventions are intentionally identica
 
 ---
 
+## Parallel routes (`@slot`)
+
+`@slot` folders are supported as pathless organizational segments.
+They do not add URL parts, similar to route groups.
+
+Example:
+
+```
+src/app/dashboard/@team/page.tsx  -> /dashboard
+```
+
+## Middleware (`middleware.ts`)
+
+Add `middleware.ts` inside a segment to run pre-route checks.
+This runs in the browser runtime and is not a server-side security boundary.
+
+- React Router adapter emits a `loader` that dynamically imports and executes the middleware default export.
+- TanStack adapter emits `beforeLoad` with the same dynamic import pattern.
+
+Example:
+
+```ts
+// src/app/admin/middleware.ts
+export default async function middleware({ params, request }: { params: Record<string, string>, request: Request }) {
+  if (!request.headers.get('x-auth')) {
+    throw new Response('Unauthorized', { status: 401 })
+  }
+}
+```
+
+## create-approuter-app CLI
+
+Scaffold a new Vite + React + AppRouter project:
+
+```bash
+npx create-approuter-app my-app
+```
+
+## VSCode extension scaffold
+
+A starter extension is included in `vscode-extension/`.
+It contributes an Explorer view named `AppRouter Routes` and lists routes discovered from `src/app/**/page.tsx`.
+
 ## Roadmap
 
 - [x] `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`
@@ -256,9 +309,12 @@ If you're already on App Router, the file conventions are intentionally identica
 - [x] Route groups `(group)`
 - [x] Typed params via `useAppParams`
 - [x] React Router v6/v7 adapter
-- [ ] `not-found.tsx` support
-- [ ] TanStack Router adapter
-- [ ] `npx create-approuter-app` scaffold CLI
+- [x] `not-found.tsx` support
+- [x] TanStack Router adapter (experimental)
+- [x] Parallel route folders (`@slot`) baseline support
+- [x] Route middleware (`middleware.ts`) baseline support
+- [x] `create-approuter-app` scaffold CLI
+- [x] VSCode extension scaffold
 
 ---
 
@@ -271,7 +327,8 @@ Use this plugin when you want App Router conventions in a pure client-side React
 
 ### Does this support TanStack Router?
 
-Not in v1. The current adapter target is React Router v6/v7. TanStack adapter is planned for v2.
+There is an experimental TanStack adapter spike (`adapter: 'tanstack-router'`) in Phase 3.  
+React Router remains the primary production target in v1; TanStack support is being hardened toward v2.
 
 ---
 

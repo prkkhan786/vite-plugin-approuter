@@ -1,0 +1,25 @@
+{
+  "name": "vite-plugin-approuter-routes",
+  "displayName": "AppRouter Routes",
+  "description": "Shows vite-plugin-approuter routes from src/app",
+  "version": "0.0.1",
+  "publisher": "parvez",
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onView:approuter.routes"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "approuter.routes",
+          "name": "AppRouter Routes"
+        }
+      ]
+    }
+  }
+}

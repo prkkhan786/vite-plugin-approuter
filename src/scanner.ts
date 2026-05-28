@@ -5,17 +5,19 @@ import { normalizePath } from './utils'
 export interface ScannedFile {
   absolutePath: string
   relativePath: string
-  kind: 'page' | 'layout' | 'loading' | 'error' | 'unknown'
+  kind: 'page' | 'layout' | 'loading' | 'error' | 'not-found' | 'middleware' | 'unknown'
   segments: string[]
 }
 
-const SPECIAL_FILES = new Set(['page.tsx', 'layout.tsx', 'loading.tsx', 'error.tsx'])
+const SPECIAL_FILES = new Set(['page.tsx', 'layout.tsx', 'loading.tsx', 'error.tsx', 'not-found.tsx', 'middleware.ts'])
 
 function getKind(name: string): ScannedFile['kind'] {
   if (name === 'page.tsx') return 'page'
   if (name === 'layout.tsx') return 'layout'
   if (name === 'loading.tsx') return 'loading'
   if (name === 'error.tsx') return 'error'
+  if (name === 'not-found.tsx') return 'not-found'
+  if (name === 'middleware.ts') return 'middleware'
   return 'unknown'
 }
 

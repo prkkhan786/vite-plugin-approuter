@@ -37,6 +37,25 @@ describe('scanAppDir', () => {
     expect(target?.segments).toEqual(['users', '[id]', 'posts', '[postId]'])
   })
 
+  it('detects not-found.tsx as a route special file', async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'scan-'))
+    await mkdir(path.join(dir, 'blog'), { recursive: true })
+    await writeFile(path.join(dir, 'blog', 'not-found.tsx'), 'export default null')
+
+    const files = await scanAppDir(dir)
+    const target = files.find((f) => f.relativePath === 'blog/not-found.tsx')
+    expect(target?.kind).toBe('not-found')
+  })
+
+  it('detects middleware.ts as a route special file', async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'scan-'))
+    await mkdir(path.join(dir, 'admin'), { recursive: true })
+    await writeFile(path.join(dir, 'admin', 'middleware.ts'), 'export default () => null')
+    const files = await scanAppDir(dir)
+    const target = files.find((f) => f.relativePath === 'admin/middleware.ts')
+    expect(target?.kind).toBe('middleware')
+  })
+
   it('normalizes Windows-style slashes', () => {
     expect(normalizePath('blog\\[slug]\\page.tsx')).toBe('blog/[slug]/page.tsx')
   })

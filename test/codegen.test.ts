@@ -4,6 +4,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { buildRouteTree } from '../src/ir'
 import { generateReactRouterConfig } from '../src/adapters/react-router'
+import { generateTanStackRouterConfig } from '../src/adapters/tanstack-router'
 import { writeRoutesFile } from '../src/codegen'
 
 describe('codegen', () => {
@@ -60,6 +61,40 @@ describe('codegen', () => {
     expect(out).toContain('children: [{ index: true, element: React.createElement(BlogPage) }, { path: ":slug", element: React.createElement(BlogSlugPage) }]')
   })
 
+  it('maps not-found.tsx to catch-all route entries', () => {
+    const tree = buildRouteTree([
+      { absolutePath: '/a/page.tsx', relativePath: 'page.tsx', kind: 'page', segments: [] },
+      { absolutePath: '/a/not-found.tsx', relativePath: 'not-found.tsx', kind: 'not-found', segments: [] },
+      { absolutePath: '/a/blog/page.tsx', relativePath: 'blog/page.tsx', kind: 'page', segments: ['blog'] },
+      { absolutePath: '/a/blog/not-found.tsx', relativePath: 'blog/not-found.tsx', kind: 'not-found', segments: ['blog'] }
+    ])
+    const out = generateReactRouterConfig(tree, { outFile: '/tmp/routes.gen.ts' })
+    expect(out).toContain('const RootNotFound = lazy(() => import(')
+    expect(out).toContain('const BlogNotFound = lazy(() => import(')
+    expect(out).toContain('{ path: "*", element: React.createElement(BlogNotFound) }')
+    expect(out).toContain('{ path: "*", element: React.createElement(RootNotFound) }')
+  })
+
+  it('emits loader when middleware.ts exists', () => {
+    const tree = buildRouteTree([
+      { absolutePath: '/a/admin/page.tsx', relativePath: 'admin/page.tsx', kind: 'page', segments: ['admin'] },
+      { absolutePath: '/a/admin/middleware.ts', relativePath: 'admin/middleware.ts', kind: 'middleware', segments: ['admin'] }
+    ])
+    const out = generateReactRouterConfig(tree, { outFile: '/tmp/routes.gen.ts' })
+    expect(out).toContain('loader: async ({ request, params }) =>')
+    expect(out).toContain('import("./admin/middleware")')
+  })
+
+  it('treats @slot as pathless organizational segment', () => {
+    const tree = buildRouteTree([
+      { absolutePath: '/a/dashboard/@team/page.tsx', relativePath: 'dashboard/@team/page.tsx', kind: 'page', segments: ['dashboard', '@team'] }
+    ])
+    const out = generateReactRouterConfig(tree, { outFile: '/tmp/routes.gen.ts' })
+    expect(out).toContain('{ path: "dashboard"')
+    expect(out).toContain('children: [{ element: React.createElement(DashboardTeamPage) }]')
+    expect(out).not.toContain('"@team"')
+  })
+
   it('includes params for multi-segment dynamic and catch-all routes', () => {
     const tree = buildRouteTree([
       { absolutePath: '/a/shop/[...path]/page.tsx', relativePath: 'shop/[...path]/page.tsx', kind: 'page', segments: ['shop', '[...path]'] },
@@ -78,5 +113,28 @@ describe('codegen', () => {
     await writeRoutesFile('export const x = 1\n', file)
     const second = await readFile(file, 'utf8')
     expect(second).toBe(first)
+  })
+
+  it('generates tanstack router config (spike)', () => {
+    const tree = buildRouteTree([
+      { absolutePath: '/a/page.tsx', relativePath: 'page.tsx', kind: 'page', segments: [] },
+      { absolutePath: '/a/blog/[slug]/page.tsx', relativePath: 'blog/[slug]/page.tsx', kind: 'page', segments: ['blog', '[slug]'] },
+      { absolutePath: '/a/not-found.tsx', relativePath: 'not-found.tsx', kind: 'not-found', segments: [] }
+    ])
+    const out = generateTanStackRouterConfig(tree, { outFile: '/tmp/routes.gen.ts' })
+    expect(out).toContain("import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'")
+    expect(out).toContain("path: \"$slug\"")
+    expect(out).toContain("path: '*', component: RootNotFound")
+    expect(out).toContain('export const router = createRouter')
+  })
+
+  it('generates tanstack beforeLoad for middleware', () => {
+    const tree = buildRouteTree([
+      { absolutePath: '/a/admin/page.tsx', relativePath: 'admin/page.tsx', kind: 'page', segments: ['admin'] },
+      { absolutePath: '/a/admin/middleware.ts', relativePath: 'admin/middleware.ts', kind: 'middleware', segments: ['admin'] }
+    ])
+    const out = generateTanStackRouterConfig(tree, { outFile: '/tmp/routes.gen.ts' })
+    expect(out).toContain('beforeLoad: async ({ params, location }) =>')
+    expect(out).toContain('import("./admin/middleware")')
   })
 })

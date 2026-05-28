@@ -8,6 +8,10 @@ export function isGroupSegment(segment: string): boolean {
   return /^\(.+\)$/.test(segment)
 }
 
+export function isParallelSegment(segment: string): boolean {
+  return /^@.+$/.test(segment)
+}
+
 export function isDynamicSegment(segment: string): boolean {
   return /^\[(?!\.\.\.).+\]$/.test(segment)
 }
@@ -17,7 +21,7 @@ export function isCatchAllSegment(segment: string): boolean {
 }
 
 export function toPathPart(segment: string): string {
-  if (isGroupSegment(segment)) return ''
+  if (isGroupSegment(segment) || isParallelSegment(segment)) return ''
   if (isCatchAllSegment(segment)) return '*'
   if (isDynamicSegment(segment)) return `:${segment.slice(1, -1)}`
   return segment

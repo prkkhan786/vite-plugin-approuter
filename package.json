@@ -2,6 +2,9 @@
   "name": "vite-plugin-approuter",
   "version": "0.1.0",
   "type": "module",
+  "bin": {
+    "create-approuter-app": "./bin/create-approuter-app.mjs"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,13 +16,15 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "bin"
   ],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev:playground": "vite --config playground/vite.config.ts"
+    "dev:playground": "vite --config playground/vite.config.ts",
+    "dev:playground:tanstack": "vite --config playground/vite.tanstack.config.ts"
   },
   "peerDependencies": {
     "vite": ">=4.0.0",
@@ -27,6 +32,7 @@
     "react-router-dom": ">=6.0.0"
   },
   "devDependencies": {
+    "@tanstack/react-router": "^1.132.27",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",

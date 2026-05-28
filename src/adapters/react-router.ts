@@ -5,6 +5,7 @@ import { withoutExtension } from '../utils'
 interface AdapterContext {
   outFile: string
   boundaries: boolean
+  appDir: string
 }
 
 function pascalCase(value: string): string {
@@ -22,7 +23,7 @@ function fileAliasBase(filePath: string): string {
   const rawParts = noExt.split('/').filter(Boolean)
   const parts = rawParts.filter((part) => part !== 'app')
   const last = parts[parts.length - 1]
-  const isLeafName = last === 'page' || last === 'layout' || last === 'loading' || last === 'error'
+  const isLeafName = last === 'page' || last === 'layout' || last === 'loading' || last === 'error' || last === 'not-found'
   const stem = isLeafName ? parts.slice(0, -1) : parts
   const normalized = stem.map((part) => {
     if (/^\(.+\)$/.test(part)) return part.slice(1, -1)
@@ -36,7 +37,7 @@ function fileAliasBase(filePath: string): string {
 export function generateReactRouterConfig(root: RouteNode, options: PluginOptions = {}): string {
   const outFile = options.outFile ?? 'src/routes.gen.ts'
   const appDir = options.appDir ?? path.dirname(outFile)
-  const ctx: AdapterContext = { outFile, boundaries: options.boundaries ?? true }
+  const ctx: AdapterContext = { outFile, appDir, boundaries: options.boundaries ?? true }
 
   const imports = new Map<string, string>()
   const dynamicParamRoutes = new Set<string>()
@@ -87,9 +88,16 @@ export function generateReactRouterConfig(root: RouteNode, options: PluginOption
     return `React.createElement(${errorVar})`
   }
 
+  function loaderField(node: RouteNode): string | undefined {
+    if (!node.middleware) return undefined
+    const absoluteFile = path.resolve(ctx.appDir, node.middleware)
+    const from = './' + withoutExtension(path.relative(path.dirname(ctx.outFile), absoluteFile)).replace(/\\/g, '/')
+    return `loader: async ({ request, params }) => { const mod = await import(${JSON.stringify(from)}); if (typeof mod.default === "function") return mod.default({ request, params }) }`
+  }
+
   function routeNode(node: RouteNode): string {
     const fields: string[] = []
-    if (!node.isGroup) {
+    if (!node.isGroup && !node.isParallel) {
       const pathPart = node.isCatchAll ? '*' : node.isDynamic && node.paramName ? `:${node.paramName}` : node.segment
       if (pathPart) fields.push(`path: ${JSON.stringify(pathPart)}`)
     }
@@ -99,6 +107,8 @@ export function generateReactRouterConfig(root: RouteNode, options: PluginOption
 
     const err = errorElement(node)
     if (err) fields.push(`errorElement: ${err}`)
+    const loader = loaderField(node)
+    if (loader) fields.push(loader)
 
     const kids = node.children.map(routeNode)
     if (node.page && kids.length > 0) {
@@ -110,6 +120,15 @@ export function generateReactRouterConfig(root: RouteNode, options: PluginOption
       }
     }
     if (kids.length > 0) fields.push(`children: [${kids.join(', ')}]`)
+    if (node.notFound) {
+      const notFoundVar = importVar(node.notFound, 'NotFound')
+      const catchAllEntry = `{ path: "*", element: React.createElement(${notFoundVar}) }`
+      if (kids.length > 0) {
+        fields.splice(fields.findIndex((f) => f.startsWith('children: [')), 1, `children: [${kids.join(', ')}, ${catchAllEntry}]`)
+      } else {
+        fields.push(`children: [${catchAllEntry}]`)
+      }
+    }
 
     return `{ ${fields.join(', ')} }`
   }
@@ -123,6 +142,10 @@ export function generateReactRouterConfig(root: RouteNode, options: PluginOption
   if (root.page) {
     const rootPage = importVar(root.page, 'Page')
     rootChildren.unshift(`{ index: true, element: React.createElement(${rootPage}) }`)
+  }
+  if (root.notFound) {
+    const rootNotFound = importVar(root.notFound, 'NotFound')
+    rootChildren.push(`{ path: "*", element: React.createElement(${rootNotFound}) }`)
   }
   if (rootChildren.length > 0) rootFields.push(`children: [${rootChildren.join(', ')}]`)
 
@@ -149,6 +172,7 @@ export const router = createBrowserRouter([
   { ${rootFields.join(', ')} }
 ])
 
+// middleware.ts runs on the client in route loaders. Do not use it as a security boundary.
 // error.tsx components should read errors with useRouteError() from react-router-dom.
 export type AppRouteParams = {
 ${paramMapLines.join('\n')}

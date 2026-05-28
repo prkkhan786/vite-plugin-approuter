@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildRouteTree } from '../src/ir'
+import type { ScannedFile } from '../src/scanner'
 
 function sampleFiles() {
   return [
@@ -10,8 +11,10 @@ function sampleFiles() {
     { absolutePath: '/app/blog/[slug]/page.tsx', relativePath: 'blog/[slug]/page.tsx', kind: 'page', segments: ['blog', '[slug]'] },
     { absolutePath: '/app/shop/[...path]/page.tsx', relativePath: 'shop/[...path]/page.tsx', kind: 'page', segments: ['shop', '[...path]'] },
     { absolutePath: '/app/(auth)/layout.tsx', relativePath: '(auth)/layout.tsx', kind: 'layout', segments: ['(auth)'] },
-    { absolutePath: '/app/(auth)/login/page.tsx', relativePath: '(auth)/login/page.tsx', kind: 'page', segments: ['(auth)', 'login'] }
-  ] as const
+    { absolutePath: '/app/(auth)/login/page.tsx', relativePath: '(auth)/login/page.tsx', kind: 'page', segments: ['(auth)', 'login'] },
+    { absolutePath: '/app/dashboard/@team/page.tsx', relativePath: 'dashboard/@team/page.tsx', kind: 'page', segments: ['dashboard', '@team'] },
+    { absolutePath: '/app/dashboard/middleware.ts', relativePath: 'dashboard/middleware.ts', kind: 'middleware', segments: ['dashboard'] }
+  ] satisfies ScannedFile[]
 }
 
 describe('buildRouteTree', () => {
@@ -59,5 +62,20 @@ describe('buildRouteTree', () => {
     expect(tree.layout).toBe('layout.tsx')
     expect(tree.children.some((n) => n.segment === 'blog')).toBe(true)
     expect(tree.children.some((n) => n.segment === '(auth)')).toBe(true)
+  })
+
+  it('parallel routes do not affect URL path', () => {
+    const tree = buildRouteTree([...sampleFiles()])
+    const dashboard = tree.children.find((n) => n.segment === 'dashboard')
+    const slot = dashboard?.children.find((n) => n.segment === '@team')
+    expect(slot?.isParallel).toBe(true)
+    expect(slot?.slotName).toBe('team')
+    expect(slot?.path).toBe('/dashboard')
+  })
+
+  it('attaches middleware metadata to nodes', () => {
+    const tree = buildRouteTree([...sampleFiles()])
+    const dashboard = tree.children.find((n) => n.segment === 'dashboard')
+    expect(dashboard?.middleware).toBe('dashboard/middleware.ts')
   })
 })
