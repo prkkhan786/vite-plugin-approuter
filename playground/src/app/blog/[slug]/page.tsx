@@ -1,3 +1,9 @@
+import { useParams } from 'react-router-dom'
+
 export default function BlogSlugPage() {
-  return <p>Blog slug page</p>
+  const { slug } = useParams()
+  if (slug === 'boom') {
+    throw new Error('Intentional blog route error')
+  }
+  return <p>Blog slug page: {slug}</p>
 }
